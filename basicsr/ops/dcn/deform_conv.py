@@ -1,3 +1,4 @@
+import os  
 import math
 import torch
 from torch import nn as nn
@@ -5,23 +6,21 @@ from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn import functional as F
 from torch.nn.modules.utils import _pair, _single
+from torch.utils.cpp_extension import load
 
 try:
     from . import deform_conv_ext
 except ImportError:
-    import os
-    BASICSR_JIT = os.getenv('BASICSR_JIT')
-    if BASICSR_JIT == 'True':
-        from torch.utils.cpp_extension import load
-        module_path = os.path.dirname(__file__)
-        deform_conv_ext = load(
-            'deform_conv',
-            sources=[
-                os.path.join(module_path, 'src', 'deform_conv_ext.cpp'),
-                os.path.join(module_path, 'src', 'deform_conv_cuda.cpp'),
-                os.path.join(module_path, 'src', 'deform_conv_cuda_kernel.cu'),
-            ],
-        )
+    module_path = os.path.dirname(__file__)
+    deform_conv_ext = load(
+        'deform_conv',
+        sources=[
+            os.path.join(module_path, 'src', 'deform_conv_ext.cpp'),
+            os.path.join(module_path, 'src', 'deform_conv_cuda.cpp'),
+            os.path.join(module_path, 'src', 'deform_conv_cuda_kernel.cu'),
+        ],
+    )
+    
 
 
 class DeformConvFunction(Function):
@@ -375,3 +374,9 @@ class ModulatedDeformConvPack(ModulatedDeformConv):
         mask = torch.sigmoid(mask)
         return modulated_deform_conv(x, offset, mask, self.weight, self.bias, self.stride, self.padding, self.dilation,
                                      self.groups, self.deformable_groups)
+
+
+
+if __name__ == '__main__': 
+    print('hello world')
+    print(deform_conv_ext)
