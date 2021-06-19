@@ -5,7 +5,7 @@ from torch import distributed as dist
 from tqdm import tqdm
 
 from basicsr.metrics import calculate_metric
-from basicsr.utils import get_root_logger, imwrite, tensor2img
+from basicsr.utils import get_root_logger, imwrite, tensor2img, timer
 from basicsr.utils.dist_util import get_dist_info
 from basicsr.utils.registry import MODEL_REGISTRY
 from .sr_model import SRModel
@@ -29,7 +29,7 @@ class VideoBaseModel(SRModel):
             num_frame_each_folder = Counter(dataset.data_info['folder'])
             for folder, num_frame in num_frame_each_folder.items():
                 self.metric_results[folder] = torch.zeros(
-                    num_frame, len(self.opt['val']['metrics']), dtype=torch.float32, device='cuda')
+                    num_frame, len(self.opt['val']['metrics']) + 1, dtype=torch.float32, device='cuda')
         rank, world_size = get_dist_info()
         if with_metrics:
             for _, tensor in self.metric_results.items():
@@ -37,16 +37,23 @@ class VideoBaseModel(SRModel):
         # record all frames (border and center frames)
         if rank == 0:
             pbar = tqdm(total=len(dataset), unit='frame')
+        
+        timer_data, timer_model = timer(), timer()
         for idx in range(rank, len(dataset), world_size):
+            timer_data.tic()
             val_data = dataset[idx]
             val_data['lq'].unsqueeze_(0)
             val_data['gt'].unsqueeze_(0)
             folder = val_data['folder']
             frame_idx, max_idx = val_data['idx'].split('/')
             lq_path = val_data['lq_path']
-
             self.feed_data(val_data)
+            timer_data.hold()
+
+            timer_model.tic()
             self.test()
+            timer_model.hold()
+
             visuals = self.get_current_visuals()
             result_img = tensor2img([visuals['result']])
             if 'gt' in visuals:
@@ -81,7 +88,10 @@ class VideoBaseModel(SRModel):
                 for metric_idx, opt_ in enumerate(self.opt['val']['metrics'].values()):
                     metric_data = dict(img1=result_img, img2=gt_img)
                     result = calculate_metric(metric_data, opt_)
-                    self.metric_results[folder][int(frame_idx), metric_idx] += result
+                    # add into torch.zeros
+                    self.metric_results[folder][int(frame_idx), metric_idx] += result  
+                # record inference speed, add into torch.zeros
+                self.metric_results[folder][int(frame_idx), -1] += 1.0 / timer_model.release()
 
             # progress bar
             if rank == 0:
@@ -123,9 +133,11 @@ class VideoBaseModel(SRModel):
         #    'metric2': float
         # }
         total_avg_results = {metric: 0 for metric in self.opt['val']['metrics'].keys()}
+        total_avg_results['FPS'] = 0 
         for folder, tensor in metric_results_avg.items():
             for idx, metric in enumerate(total_avg_results.keys()):
                 total_avg_results[metric] += metric_results_avg[folder][idx].item()
+
         # average among folders
         for metric in total_avg_results.keys():
             total_avg_results[metric] /= len(metric_results_avg)
