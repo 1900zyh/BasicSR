@@ -1,17 +1,22 @@
 import logging
+import random 
 import torch
+import argparse
 from os import path as osp
 
 from basicsr.data import build_dataloader, build_dataset
 from basicsr.models import build_model
-from basicsr.train import parse_options
-from basicsr.utils import get_env_info, get_root_logger, get_time_str, make_exp_dirs
-from basicsr.utils.options import dict2str
+from basicsr.utils import get_env_info, get_root_logger, get_time_str, make_exp_dirs, set_random_seed
+from basicsr.utils.options import dict2str, parse
 
 
-def test_pipeline(root_path):
-    # parse options, set distributed setting, set ramdom seed
-    opt = parse_options(root_path, is_train=False)
+def test_pipeline(opt):
+    # random seed
+    seed = opt.get('manual_seed')
+    if seed is None:
+        seed = random.randint(1, 10000)
+        opt['manual_seed'] = seed
+    set_random_seed(seed + opt['rank'])
 
     torch.backends.cudnn.benchmark = True
     # torch.backends.cudnn.deterministic = True
@@ -43,4 +48,16 @@ def test_pipeline(root_path):
 
 if __name__ == '__main__':
     root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
-    test_pipeline(root_path)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-opt', type=str, required=True, help='Path to option YAML file.')
+    parser.add_argument('--auto_resume', action='store_true')
+    parser.add_argument('--storage', type=str, default=None)
+    # parser.add_argument('--launcher', choices=['none', 'pytorch', 'slurm'], default='none', help='job launcher')
+    # parser.add_argument('--local_rank', type=int, default=0)
+    
+    args = parser.parse_args()
+    opt = parse(args.opt, root_path, is_train=False)
+    opt['auto_resume'] = args.auto_resume
+
+    test_pipeline(opt)
