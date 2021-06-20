@@ -148,7 +148,6 @@ def train_pipeline(rank, opt):
         shutil.rmtree(opt['path']['experiments_root'])
 
 
-
 def init_loggers(opt):
     log_file = osp.join(opt['path']['log'], f"train_{opt['name']}_{get_time_str()}.log")
     logger = get_root_logger(logger_name='basicsr', log_level=logging.INFO, log_file=log_file)
@@ -229,42 +228,21 @@ def load_resume_state(opt):
 
 
 if __name__ == '__main__':
+    # complie basicsr library 
     os.system('BASICSR_EXT=True python setup.py develop')
-    root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-opt', type=str, required=True, help='Path to option YAML file.')
     parser.add_argument('--auto_resume', action='store_true')
     parser.add_argument('--mnt', type=str, default='./')
     parser.add_argument('--nfs', type=str, default='./')
-    parser.add_argument('--launcher', choices=['none', 'pytorch', 'slurm'], default='mpspawn', help='job launcher')
-    # parser.add_argument('--local_rank', type=int, default=0)
-    
-    # if args.launcher == 'none':
-    #     opt['dist'] = False
-    #     print('Disable distributed.', flush=True)
-    # else:
-    #     opt['dist'] = True
-    #     if args.launcher == 'slurm' and 'dist_params' in opt:
-    #         init_dist(args.launcher, **opt['dist_params'])
-    #     else:
-    #         init_dist(args.launcher)
-    
 
     args = parser.parse_args()
-    opt = parse(args.opt, root_path, is_train=True)
+    opt = parse(args.opt, mnt=args.mnt, nfs=args.nfs, is_train=True)
     opt['auto_resume'] = args.auto_resume
-    opt['storage'] = args.storage 
 
-    opt['num_gpu'] = torch.cuda.device_count()
-    print(f'Use {torch.cuda.device_count()} GPUs for training.')
-
-    if opt['num_gpu'] > 1: 
-        opt['dist'] = True 
-        opt['world_size'] = opt['num_gpu']
+    if opt['dist']: 
         mp.spawn(train_pipeline, nprocs=opt['num_gpu'], args=(opt,))
     else: 
-        opt['dist'] = False 
-        opt['world_size'] = 1 
         opt['rank'] = 0 
         train_pipeline(opt)
