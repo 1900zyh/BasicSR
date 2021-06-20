@@ -1,5 +1,5 @@
 # general settings
-name: dist_aml
+name: train_aml_edvr_L_x4_reds
 model_type: EDVRModel
 scale: 4
 num_gpu: 4  # set num_gpu: 0 for cpu mode
@@ -96,7 +96,7 @@ train:
 
 # validation settings
 val:
-  val_freq: !!float 5e3
+  val_freq: 600000
   save_img: false
 
   metrics:
