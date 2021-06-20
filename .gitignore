@@ -1,5 +1,5 @@
 # ignored folders
-debug.py 
+debug*
 datasets/*
 dataset/*
 experiments/*
