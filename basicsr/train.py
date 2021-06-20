@@ -24,10 +24,9 @@ from basicsr.utils.options import dict2str, parse
 
 
 def train_pipeline(rank, opt):
-
     # distributed settings
+    opt['rank'] = rank 
     if opt['dist']: 
-        opt['rank'] = rank 
         torch.cuda.set_device(rank)
         torch.distributed.init_process_group(
             backend="nccl", 
@@ -235,15 +234,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-opt', type=str, required=True, help='Path to option YAML file.')
     parser.add_argument('--auto_resume', action='store_true')
+    parser.add_argument('--dist', action='store_true')
     parser.add_argument('--mnt', type=str, default='~/BasicSR')
     parser.add_argument('--nfs', type=str, default='~/BasicSR')
 
     args = parser.parse_args()
-    opt = parse(args.opt, mnt=args.mnt, nfs=args.nfs, is_train=True)
+    opt = parse(args.opt, mnt=args.mnt, nfs=args.nfs, dist=args.dist, is_train=True)
     opt['auto_resume'] = args.auto_resume
 
     if opt['dist']: 
         mp.spawn(train_pipeline, nprocs=opt['num_gpu'], args=(opt,))
     else: 
-        opt['rank'] = 0 
-        train_pipeline(opt)
+        train_pipeline(0, opt)

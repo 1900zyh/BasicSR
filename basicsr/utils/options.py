@@ -29,7 +29,7 @@ def ordered_yaml():
     return Loader, Dumper
 
 
-def parse(opt_path, mnt='./', nfs='./', is_train=True):
+def parse(opt_path, mnt='./', nfs='./', dist=False, is_train=True):
     """Parse option file.
 
     Args:
@@ -47,21 +47,16 @@ def parse(opt_path, mnt='./', nfs='./', is_train=True):
     opt['nfs'] = nfs
 
     # distributed setting 
+    opt['dist'] = dist 
     opt['num_gpu'] = torch.cuda.device_count()
+    opt['world_size'] = opt['num_gpu'] if dist else 1
     print(f'Use {torch.cuda.device_count()} GPUs for training.')
-    if opt['num_gpu'] > 1: 
-        opt['dist'] = True 
-        opt['world_size'] = opt['num_gpu']
-    else: 
-        opt['dist'] = False 
-        opt['world_size'] = 1 
 
     # datasets
     for phase, dataset in opt['datasets'].items():
-
         # for several datasets, e.g., test_1, test_2
         if phase == 'train': 
-            dataset['batch_size_per_gpu'] = dataset['batch_size'] // opt['world_size']
+            dataset['batch_size_per_gpu'] = dataset['batch_size'] // opt['num_gpu']
         phase = phase.split('_')[0]
         dataset['phase'] = phase
         if 'scale' in opt:
@@ -86,13 +81,6 @@ def parse(opt_path, mnt='./', nfs='./', is_train=True):
         opt['path']['training_states'] = osp.join(experiments_root, 'training_states')
         opt['path']['log'] = experiments_root
         opt['path']['visualization'] = osp.join(experiments_root, 'visualization')
-
-        # change some options for debug mode
-        if 'debug' in opt['name']:
-            if 'val' in opt:
-                opt['val']['val_freq'] = 8
-            opt['logger']['print_freq'] = 1
-            opt['logger']['save_checkpoint_freq'] = 8
     else:  # test
         results_root = osp.join(nfs, 'results', opt['name'])
         opt['path']['results_root'] = results_root

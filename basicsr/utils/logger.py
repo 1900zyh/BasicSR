@@ -129,7 +129,7 @@ def get_root_logger(logger_name='basicsr', log_level=logging.INFO, log_file=None
     format_str = '%(asctime)s %(levelname)s: %(message)s'
     logging.basicConfig(format=format_str, level=log_level)
     rank, world_size = get_dist_info()
-    logger.info(f'distributed training with {rank}/{world_size}')
+    logger.info(f'Training with {rank}/{world_size}')
 
 
     if rank != 0:
