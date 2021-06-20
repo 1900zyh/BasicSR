@@ -67,11 +67,11 @@ def parse(opt_path, mnt='./', nfs='./', is_train=True):
         if 'scale' in opt:
             dataset['scale'] = opt['scale']
         if dataset.get('dataroot_gt') is not None:
-            dataset['dataroot_gt'] = osp.expanduser(dataset['dataroot_gt'])
             dataset['dataroot_gt'] = osp.join(mnt, dataset['dataroot_gt'])
-        if dataset.get('dataroot_lq') is not None:
-            dataset['dataroot_lq'] = osp.expanduser(dataset['dataroot_lq'])
+            dataset['dataroot_gt'] = osp.expanduser(dataset['dataroot_gt'])
+        if dataset.get('dataroot_lq') is not None: 
             dataset['dataroot_lq'] = osp.join(mnt, dataset['dataroot_lq'])
+            dataset['dataroot_lq'] = osp.expanduser(dataset['dataroot_lq'])
 
     # paths
     for key, val in opt['path'].items():
@@ -80,6 +80,7 @@ def parse(opt_path, mnt='./', nfs='./', is_train=True):
 
     if is_train:
         experiments_root = osp.join(nfs, 'experiments', opt['name'])
+        experiments_root = osp.expanduser(experiments_root)
         opt['path']['experiments_root'] = experiments_root
         opt['path']['models'] = osp.join(experiments_root, 'models')
         opt['path']['training_states'] = osp.join(experiments_root, 'training_states')

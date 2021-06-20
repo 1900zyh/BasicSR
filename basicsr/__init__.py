@@ -9,4 +9,8 @@ from .ops import *
 from .test import *
 from .train import *
 from .utils import *
-from .version import __gitsha__, __version__
+
+import sys 
+import os.path as osp 
+root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
+sys.path.append(root_path)

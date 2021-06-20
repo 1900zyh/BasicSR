@@ -1,4 +1,5 @@
-import os 
+
+import sys 
 import time
 import math
 import shutil
@@ -11,6 +12,8 @@ from os import path as osp
 import torch
 import torch.multiprocessing as mp
 
+root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
+sys.path.append(root_path)
 from basicsr.data import build_dataloader, build_dataset
 from basicsr.data.data_sampler import EnlargedSampler
 from basicsr.data.prefetch_dataloader import CPUPrefetcher, CUDAPrefetcher
@@ -45,6 +48,7 @@ def train_pipeline(rank, opt):
 
     # load resume states if necessary
     resume_state = load_resume_state(opt)
+
     # mkdir for experiments and logger
     if resume_state is None:
         make_exp_dirs(opt)
@@ -228,14 +232,11 @@ def load_resume_state(opt):
 
 
 if __name__ == '__main__':
-    # complie basicsr library 
-    os.system('BASICSR_EXT=True python setup.py develop')
-
     parser = argparse.ArgumentParser()
     parser.add_argument('-opt', type=str, required=True, help='Path to option YAML file.')
     parser.add_argument('--auto_resume', action='store_true')
-    parser.add_argument('--mnt', type=str, default='./')
-    parser.add_argument('--nfs', type=str, default='./')
+    parser.add_argument('--mnt', type=str, default='~/BasicSR')
+    parser.add_argument('--nfs', type=str, default='~/BasicSR')
 
     args = parser.parse_args()
     opt = parse(args.opt, mnt=args.mnt, nfs=args.nfs, is_train=True)
