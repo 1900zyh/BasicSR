@@ -1,6 +1,7 @@
-import glob
-import os
 
+import os
+import glob
+from tqdm import tqdm 
 
 def regroup_reds_dataset(train_path, val_path):
     """Regroup original REDS datasets.
@@ -17,7 +18,7 @@ def regroup_reds_dataset(train_path, val_path):
     """
     # move the validation data to the train folder
     val_folders = glob.glob(os.path.join(val_path, '*'))
-    for folder in val_folders:
+    for folder in tqdm(val_folders):
         new_folder_idx = int(folder.split('/')[-1]) + 240
         os.system(f'cp -r {folder} {os.path.join(train_path, str(new_folder_idx))}')
 
