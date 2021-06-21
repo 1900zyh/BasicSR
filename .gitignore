@@ -1,8 +1,9 @@
 # ignored folders
-debug*
+debug_local.yml
+debug.py
 datasets/*
 dataset/*
-experiments/*
+experiments
 results/*
 tb_logger/*
 wandb/*

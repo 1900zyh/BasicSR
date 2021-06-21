@@ -19,7 +19,7 @@ from basicsr.data.data_sampler import EnlargedSampler
 from basicsr.data.prefetch_dataloader import CPUPrefetcher, CUDAPrefetcher
 from basicsr.models import build_model
 from basicsr.utils import (MessageLogger, check_resume, get_env_info, get_root_logger, get_time_str, init_tb_logger,
-                           init_wandb_logger, make_exp_dirs, mkdir_and_rename, scandir, set_random_seed)
+                           init_wandb_logger, make_exp_dirs, mkdir_and_rename, scandir, set_random_seed, timer)
 from basicsr.utils.options import dict2str, parse
 
 
@@ -90,17 +90,16 @@ def train_pipeline(rank, opt):
 
     # training
     logger.info(f'Start training from epoch: {start_epoch}, iter: {current_iter}')
-    data_time, iter_time = time.time(), time.time()
-    start_time = time.time()
+    timer_data, timer_model = timer(), timer()
 
     for epoch in range(start_epoch, total_epochs + 1):
         train_sampler.set_epoch(epoch)
         prefetcher.reset()
+        timer_data.tic()
         train_data = prefetcher.next()
+        timer_data.hold()
 
         while train_data is not None:
-            data_time = time.time() - data_time
-
             current_iter += 1
             if current_iter > total_iters:
                 break
@@ -108,13 +107,14 @@ def train_pipeline(rank, opt):
             model.update_learning_rate(current_iter, warmup_iter=opt['train'].get('warmup_iter', -1))
             # training
             model.feed_data(train_data)
+            timer_model.tic()
             model.optimize_parameters(current_iter)
-            iter_time = time.time() - iter_time
+            timer_model.hold()
             # log
             if current_iter % opt['logger']['print_freq'] == 0:
                 log_vars = {'epoch': epoch, 'iter': current_iter}
                 log_vars.update({'lrs': model.get_current_learning_rate()})
-                log_vars.update({'time': iter_time, 'data_time': data_time})
+                log_vars.update({'time': timer_model.release(), 'data_time': timer_data.release()})
                 log_vars.update(model.get_current_log())
                 msg_logger(log_vars)
 
@@ -127,8 +127,6 @@ def train_pipeline(rank, opt):
             if opt.get('val') is not None and (current_iter % opt['val']['val_freq'] == 0):
                 model.validation(val_loader, current_iter, tb_logger, opt['val']['save_img'])
 
-            data_time = time.time()
-            iter_time = time.time()
             train_data = prefetcher.next()
         # end of iter
     

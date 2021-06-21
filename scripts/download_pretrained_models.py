@@ -1,7 +1,11 @@
-import argparse
+
 import os
+import sys
+import argparse
 from os import path as osp
 
+root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
+sys.path.append(root_path)
 from basicsr.utils.download_util import download_file_from_google_drive
 
 
