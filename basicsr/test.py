@@ -2,8 +2,11 @@ import logging
 import random 
 import torch
 import argparse
+import sys
 from os import path as osp
 
+root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
+sys.path.append(root_path)
 from basicsr.data import build_dataloader, build_dataset
 from basicsr.models import build_model
 from basicsr.utils import get_env_info, get_root_logger, get_time_str, make_exp_dirs, set_random_seed
@@ -48,16 +51,17 @@ def test_pipeline(opt):
 
 if __name__ == '__main__':
     root_path = osp.abspath(osp.join(__file__, osp.pardir, osp.pardir))
-
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('-opt', type=str, required=True, help='Path to option YAML file.')
     parser.add_argument('--auto_resume', action='store_true')
-    parser.add_argument('--storage', type=str, default=None)
-    # parser.add_argument('--launcher', choices=['none', 'pytorch', 'slurm'], default='none', help='job launcher')
-    # parser.add_argument('--local_rank', type=int, default=0)
-    
+    parser.add_argument('--dist', action='store_true')
+    parser.add_argument('--mnt', type=str, default='~/BasicSR')
+    parser.add_argument('--nfs', type=str, default='~/BasicSR')
+
     args = parser.parse_args()
-    opt = parse(args.opt, root_path, is_train=False)
+    opt = parse(args.opt, mnt=args.mnt, nfs=args.nfs, dist=args.dist, is_train=False)
     opt['auto_resume'] = args.auto_resume
 
+    opt['rank'] = 0
     test_pipeline(opt)
